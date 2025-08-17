@@ -1,0 +1,13 @@
+# FastAPI Server
+fastapi
+uvicorn
+
+# AI & Machine Learning
+openai
+chromadb
+sentence-transformers
+
+# Utilities & APIs
+python-dotenv
+requests
+ddgs
