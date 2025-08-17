@@ -284,7 +284,7 @@ body {
 }
 /* Wrapper for message text and edit button */
 
-/* === NEW: Message Editing Styles === */
+/* === Message Editing Styles === */
 .edit-btn {
     position: absolute;
     top: -10px;

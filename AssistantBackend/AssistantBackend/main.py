@@ -1,5 +1,3 @@
-# main.py (Full updated version with Web Provider Choice)
-
 import os
 import json
 import re
@@ -156,10 +154,6 @@ async def save_memory(interaction_summary: str):
 async def chat_endpoint(request: ChatRequest):
     history = [msg.dict() for msg in request.history]
     
-    # NOTE: Message editing is handled by the frontend.
-    # The frontend sends the complete, updated history array with each request.
-    # This backend code will process whatever history it receives, so no changes are needed here to support editing.
-    
     settings = request.settings if request.settings else SettingsModel()
 
     if request.continuation:
@@ -169,7 +163,6 @@ async def chat_endpoint(request: ChatRequest):
             search_results = await web_search(query, provider=settings.provider)
             history.append({"role": "tool", "content": f"Here are the search results:\n\n{search_results}\n\nPlease use these results to answer my original question."})
         elif action in ["denied_search", "save_memory", "dont_save_memory"]:
-            # Handle other continuation actions that might modify history or state
             if action == "denied_search":
                 history.append({"role": "user", "content": "The user has denied the web search. Please answer the previous question using only your existing knowledge."})
             elif action == "save_memory":
@@ -186,8 +179,6 @@ async def chat_endpoint(request: ChatRequest):
         relevant_memories = await get_relevant_memories(user_input)
         history[0]['content'] = f"{persona}\n\n{profile_str}\n\n{time_context}\n\n{relevant_memories}"
 
-    # Context Truncation Logic
-    # ... (omitted for brevity, same as before)
 
     try:
         completion = await asyncio.to_thread(client_llm.chat.completions.create, model="local-model", messages=history)
@@ -216,7 +207,6 @@ async def chat_endpoint(request: ChatRequest):
         return {"history": history}
 
 # --- Other API Endpoints (Persona, Profile, Chat Management) ---
-# These remain unchanged.
 @app.get("/api/persona")
 async def get_persona():
     return {"persona": Path(PERSONA_FILE).read_text()}
