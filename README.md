@@ -1,5 +1,9 @@
 # 🤖 My Personal AI Assistant
 
+
+*WIP. Use with caution*
+
+
 This is a full-stack application for a completely local, personal AI assistant. It features a persistent memory, web search capabilities, and a highly customizable personality, all accessible through a modern and responsive web interface.
 
 ## ✨ Features
