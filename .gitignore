@@ -1,10 +1,26 @@
-# Python backend
+# Python / Backend
+# ----------------
 venv/
 __pycache__/
 *.pyc
+*.pyproj
 .env
 
-# Node.js frontend
+# Application Data (Should NOT be in Git)
+assistant_memory/
+chats.db
+
+# IDE / Editor Specific
+# --------------------
+.vs/
+*.sln
+
+# Node.js / Frontend
+# ------------------
 node_modules/
 dist/
 .DS_Store
+
+# Root-level files that should be inside a sub-directory
+# ------------------------------------------------------
+/package-lock.json
