@@ -45,6 +45,10 @@ DEFAULT_SYSTEM_PROMPT = """You are a powerful and intelligent assistant. Your pr
 You have access to a web search tool. To use it, you MUST respond with ONLY a JSON object that strictly follows this format:
 {"tool_name": "web_search", "query": "a concise and specific search query"}
 </TOOLS>
+<FORMATTING_INSTRUCTIONS>
+- Always use GitHub Flavored Markdown for lists, bolding, code blocks, and tables.
+- When you are asked to provide a table, you MUST format it using Markdown's pipe and hyphen syntax.
+</FORMATTING_INSTRUCTIONS>
 """
 
 def init_db():

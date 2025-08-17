@@ -742,3 +742,27 @@ input:checked + .slider {
         border: none;
     }
 }
+
+/* === Table formatting === */
+.message-bubble table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+    background-color: rgba(0, 0, 0, 0.2); /* Slightly darker background for the table */
+}
+
+.message-bubble th,
+.message-bubble td {
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 0.75rem;
+    text-align: left;
+}
+
+.message-bubble thead {
+    background-color: rgba(255, 255, 255, 0.1); /* Lighter background for the header */
+}
+
+.message-bubble th {
+    font-weight: 600;
+}
