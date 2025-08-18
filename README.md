@@ -19,7 +19,7 @@ This is a full-stack application for a completely local, personal AI assistant. 
     * Edit any message in the conversation to correct typos or change the conversational path.
     * View the AI's "thinking" process.
 * **Modern UI**: A responsive and clean user interface built with React and TypeScript, featuring a dark mode and animated backgrounds.
-  <img width="1504" height="810" alt="image" src="https://github.com/user-attachments/assets/3006cfe8-87a0-463d-82a1-868de4bb35fb" />
+  <img width="1506" height="1006" alt="image" src="https://github.com/user-attachments/assets/234583aa-1d4d-4301-98f7-f999cabaea2f" />
 * **Personas**:
     * Chat with 3 different personas (or edit them according to your need)
       <img width="659" height="920" alt="image" src="https://github.com/user-attachments/assets/11cde399-1c5f-48ab-aefd-6095bdf8cc93" />
@@ -91,6 +91,8 @@ Follow these instructions to get the project running on your local machine.
     npm run dev
     ```
     The frontend will now be running at `http://localhost:5173` (or a similar address). Open this URL in your browser to start chatting with your assistant!
+
+
 
 ### Vector PNG images used in this project are downloaded from free collection of Vecteezy
 [Avatar PNGs by Vecteezy](https://www.vecteezy.com/free-png/avatar)
