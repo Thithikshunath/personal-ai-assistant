@@ -163,6 +163,7 @@ body {
     flex-shrink: 0;
     display: flex;
     align-items: center;
+    gap: 0.5rem;
 }
 
 .icon-button {
@@ -178,6 +179,8 @@ body {
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+    width: 40px;
+    height: 40px;
 }
 
     .icon-button:hover {
@@ -189,8 +192,6 @@ body {
     display: flex;
     align-items: center;
     gap: 0.75rem;
-    flex-grow: 1;
-    margin: 0 0.5rem;
     min-width: 0;
 }
 
@@ -241,19 +242,73 @@ body {
         font-weight: 600;
     }
 
-.new-chat-button {
-    background-color: rgba(255, 255, 255, 0.1);
-    font-size: 0.9rem;
-    gap: 0.5rem;
-    padding: 0.5rem 1rem;
-    border-radius: 6px;
+.top-bar-actions {
     margin-left: auto;
+    display: flex;
+    align-items: center;
 }
 
-    .new-chat-button:hover {
-        background-color: rgba(255, 255, 255, 0.2);
-        color: white;
+/* === Persona Switcher === */
+.persona-switcher {
+    display: flex;
+    align-items: center;
+    padding: 0.25rem 0.5rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    position: relative;
+    flex-grow: 1;
+}
+
+    .persona-switcher:not(.locked):hover {
+        background-color: rgba(255, 255, 255, 0.1);
     }
+
+    .persona-switcher.locked {
+        cursor: default;
+    }
+
+.switcher-arrow {
+    margin-left: 0.5rem;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.persona-dropdown {
+    position: absolute;
+    top: 110%;
+    left: 0;
+    background-color: #2c2c2e;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    z-index: 100;
+    width: 250px;
+    overflow: hidden;
+}
+
+.persona-dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+    .persona-dropdown-item:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .persona-dropdown-item img {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+    }
+
+    .persona-dropdown-item span {
+        font-weight: 500;
+    }
+
 
 /* === Chat Window, Messages & Avatars === */
 .chat-window {
@@ -612,8 +667,7 @@ body {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
-    margin-bottom: 2rem;
-    animation: contentFadeIn 0.4s ease-out; 
+    animation: contentFadeIn 0.4s ease-out;
 }
 
     .setting-section p {
@@ -628,8 +682,53 @@ body {
         font-size: 0.9rem;
         color: rgba(255, 255, 255, 0.8);
     }
+/* New Persona Settings Styles */
+.persona-selector {
+    display: flex;
+    justify-content: space-around;
+    gap: 1rem;
+    margin: 1rem 0;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+}
 
-.settings-textarea, .modal-content input {
+.persona-choice {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 8px;
+    border: 2px solid transparent;
+    transition: all 0.2s ease;
+}
+
+    .persona-choice.active {
+        border-color: #6a11cb;
+        background-color: rgba(106, 17, 203, 0.1);
+    }
+
+    .persona-choice img {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        object-fit: cover;
+    }
+
+    .persona-choice span {
+        font-size: 0.9rem;
+        font-weight: 500;
+    }
+
+.persona-editor {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+
+.settings-textarea, .modal-content input[type="text"] {
     width: 100%;
     box-sizing: border-box;
     padding: 0.75rem;
@@ -647,7 +746,6 @@ body {
     display: flex;
     justify-content: flex-end;
     gap: 1rem;
-    margin-top: 1rem;
     padding: 0 2rem 2rem 2rem;
     border-top: 1px solid rgba(255, 255, 255, 0.1);
     padding-top: 1.5rem;
@@ -694,6 +792,7 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    padding: 0.5rem 0;
 }
 
 .toggle-switch {
