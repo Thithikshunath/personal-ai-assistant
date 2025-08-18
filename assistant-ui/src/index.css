@@ -76,10 +76,10 @@ body {
     flex-direction: column;
     background: rgba(20, 20, 22, 0.75);
     backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37), 0 0 0 1px rgba(255, 255, 255, 0.08) inset;
     border-radius: 16px;
     overflow: hidden;
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
 }
 
 /* === Sidebar & Saved Chats === */
@@ -99,6 +99,22 @@ body {
     overflow-y: auto;
     white-space: nowrap;
 }
+
+.empty-chats-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding: 1rem;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+    .empty-chats-placeholder svg {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+    }
 
 .saved-chat-item {
     display: flex;
@@ -139,7 +155,7 @@ body {
         color: #dc3545;
     }
 
-/* === Corrected Top Bar (Final Version) === */
+/* === Top Bar === */
 .top-bar {
     padding: 0.75rem 1rem;
     background: rgba(44, 44, 46, 0.5);
@@ -184,6 +200,22 @@ body {
     border-radius: 50%;
     object-fit: cover;
     flex-shrink: 0;
+    transition: box-shadow 0.4s ease-in-out;
+}
+
+.avatar-thinking-glow {
+    box-shadow: 0 0 12px 3px rgba(37, 117, 252, 0.7);
+    animation: pulse-glow 2s infinite alternate;
+}
+
+@keyframes pulse-glow {
+    from {
+        box-shadow: 0 0 8px 2px rgba(37, 117, 252, 0.5);
+    }
+
+    to {
+        box-shadow: 0 0 16px 4px rgba(106, 17, 203, 0.7);
+    }
 }
 
 .assistant-title-wrapper {
@@ -262,6 +294,7 @@ body {
     padding: 0.85rem 1.25rem;
     border-radius: 22px;
     line-height: 1.5;
+    position: relative;
 }
 
 .message-wrapper.assistant .message-bubble {
@@ -282,34 +315,52 @@ body {
 .message-content {
     position: relative;
 }
-/* Wrapper for message text and edit button */
 
-/* === Message Editing Styles === */
-.edit-btn {
+/* === Message Action Buttons (Edit, Delete, Regenerate) === */
+.message-actions {
     position: absolute;
-    top: -10px;
-    right: -10px;
+    top: -15px;
+    right: 0px;
+    display: flex;
+    gap: 0.3rem;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s, transform 0.2s, visibility 0.2s;
+    transform: translateY(5px);
+}
+
+.message-bubble:hover .message-actions {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.message-action-btn {
     background: #3e3e42;
     color: white;
     border: 1px solid #555;
     border-radius: 50%;
-    width: 24px;
-    height: 24px;
+    width: 28px;
+    height: 28px;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.2s, transform 0.2s, visibility 0.2s;
-    font-size: 0.7rem;
+    font-size: 0.8rem;
 }
 
-.message-bubble:hover .edit-btn {
-    opacity: 1;
-    visibility: visible;
-    transform: scale(1.1);
-}
+    .message-action-btn:hover {
+        background: #555;
+        transform: scale(1.1);
+    }
+
+    .message-action-btn.delete:hover {
+        color: #dc3545;
+    }
+
+    .message-action-btn.regenerate:hover {
+        color: #25d366;
+    }
 
 .edit-view {
     display: flex;
@@ -346,9 +397,10 @@ body {
         cursor: pointer;
     }
 
-        .edit-actions button:last-child {
+        .edit-actions button.regenerate {
             background: #2575fc;
         }
+
 
 /* === Input Area === */
 .input-area {
@@ -402,42 +454,6 @@ body {
         }
 
 /* === Other Components === */
-.confirmation-box {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 1.5rem;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-    background-color: rgba(20, 20, 22, 0.75);
-    gap: 1.25rem;
-}
-
-    .confirmation-box p {
-        margin: 0;
-        flex-grow: 1;
-    }
-
-    .confirmation-box button {
-        padding: 0.65rem 1.25rem;
-        border: none;
-        border-radius: 18px;
-        color: white;
-        cursor: pointer;
-        transition: opacity 0.3s ease;
-    }
-
-        .confirmation-box button:hover {
-            opacity: 0.8;
-        }
-
-        .confirmation-box button:first-of-type {
-            background-color: #28a745;
-        }
-
-        .confirmation-box button:last-of-type {
-            background-color: #dc3545;
-        }
-
 .toggle-thinking-button {
     background: none;
     border: none;
@@ -520,7 +536,7 @@ body {
     }
 }
 
-/* --- Settings Modal & NEW Radio/Toggle Styles --- */
+/* --- New Generic Modal & Settings Modal Styles --- */
 .modal-overlay {
     position: fixed;
     top: 0;
@@ -537,24 +553,67 @@ body {
 
 .modal-content {
     background: #1c1c1e;
-    padding: 2rem;
     border-radius: 16px;
     border: 1px solid rgba(255, 255, 255, 0.1);
     width: 90%;
-    max-width: 600px;
+    max-width: 650px;
     display: flex;
     flex-direction: column;
-    gap: 1.5rem;
 }
+
+    .modal-content.confirmation {
+        max-width: 450px;
+        gap: 1rem;
+        padding: 2rem;
+    }
 
     .modal-content h2 {
         margin-top: 0;
+        padding: 0 2rem;
     }
+
+    .modal-content p {
+        margin: 0;
+        line-height: 1.6;
+        color: rgba(255, 255, 255, 0.8);
+    }
+
+/* New Tab Styles for Settings Modal */
+.tabs-nav {
+    display: flex;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 1rem 2rem 0 2rem;
+    gap: 1.5rem;
+}
+
+.tab-button {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 1rem;
+    padding: 0.75rem 0.25rem;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+}
+
+    .tab-button.active {
+        color: white;
+        border-bottom-color: #6a11cb;
+    }
+
+.tab-content-wrapper {
+    padding: 2rem;
+    overflow: hidden;
+    transition: height 0.35s ease-in-out;
+}
+
 
 .setting-section {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
+    margin-bottom: 2rem;
+    animation: contentFadeIn 0.4s ease-out; 
 }
 
     .setting-section p {
@@ -578,7 +637,8 @@ body {
     border: 1px solid rgba(255, 255, 255, 0.2);
     background-color: #2c2c2e;
     color: white;
-    font-size: 1rem;
+    font-size: 0.9rem;
+    line-height: 1.6;
     font-family: 'Inter', sans-serif;
     resize: vertical;
 }
@@ -588,23 +648,45 @@ body {
     justify-content: flex-end;
     gap: 1rem;
     margin-top: 1rem;
+    padding: 0 2rem 2rem 2rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding-top: 1.5rem;
 }
 
-    .modal-actions button {
-        padding: 0.6rem 1.2rem;
-        border-radius: 8px;
-        border: none;
-        cursor: pointer;
-        font-weight: 500;
+.confirmation .modal-actions {
+    padding: 0;
+    border-top: none;
+    margin-top: 1.5rem;
+    padding-top: 0;
+}
+
+.modal-actions button {
+    padding: 0.6rem 1.5rem;
+    border-radius: 22px;
+    border: none;
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 0.9rem;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+    .modal-actions button:hover {
+        transform: scale(1.05);
+        opacity: 0.9;
     }
 
 .btn-primary {
-    background: #6a11cb;
+    background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+    color: white;
+}
+
+.btn-danger {
+    background: #dc3545;
     color: white;
 }
 
 .btn-secondary {
-    background: #333;
+    background: #444;
     color: white;
 }
 
@@ -716,6 +798,18 @@ input:checked + .slider {
     }
 }
 
+@keyframes contentFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 @media (max-width: 768px) {
     .sidebar {
         position: fixed;
@@ -749,7 +843,8 @@ input:checked + .slider {
     border-collapse: collapse;
     margin-top: 1rem;
     margin-bottom: 1rem;
-    background-color: rgba(0, 0, 0, 0.2); /* Slightly darker background for the table */
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
 }
 
 .message-bubble th,
@@ -760,7 +855,7 @@ input:checked + .slider {
 }
 
 .message-bubble thead {
-    background-color: rgba(255, 255, 255, 0.1); /* Lighter background for the header */
+    background-color: rgba(255, 255, 255, 0.1);
 }
 
 .message-bubble th {
