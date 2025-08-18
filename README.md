@@ -19,15 +19,12 @@ This is a full-stack application for a completely local, personal AI assistant. 
     * Edit any message in the conversation to correct typos or change the conversational path.
     * View the AI's "thinking" process.
 * **Modern UI**: A responsive and clean user interface built with React and TypeScript, featuring a dark mode and animated backgrounds.
-* **Secure Configuration**: API keys and other secrets are managed securely using an `.env` file.
-### Screenshots: 
-* Main chat page:
   <img width="1504" height="810" alt="image" src="https://github.com/user-attachments/assets/3006cfe8-87a0-463d-82a1-868de4bb35fb" />
-* Settings:
-  <img width="686" height="1365" alt="image" src="https://github.com/user-attachments/assets/b87ad454-9b94-43b0-aab3-514ed762086e" />
-* Websearch:
-  <img width="1052" height="813" alt="image" src="https://github.com/user-attachments/assets/a18d34e2-f4c2-45ba-afee-4877b1682140" />
-* Handling tables, math and code:
+* **Personas**:
+    * Chat with 3 different personas (or edit them according to your need)
+      <img width="659" height="920" alt="image" src="https://github.com/user-attachments/assets/11cde399-1c5f-48ab-aefd-6095bdf8cc93" />
+* **Secure Configuration**: API keys and other secrets are managed securely using an `.env` file.
+* Ability to render tables, equations and code with proper formatting:
   <img width="1504" height="1007" alt="image" src="https://github.com/user-attachments/assets/7f5f65b5-f570-45d3-948f-355b1b54171f" />
   <img width="1499" height="1007" alt="image" src="https://github.com/user-attachments/assets/3b22edce-fbd3-4c51-8db6-026524989cae" />
   <img width="1503" height="1001" alt="image" src="https://github.com/user-attachments/assets/f9e57c6b-9b17-4e2b-9375-078fb32a04d2" />
@@ -94,3 +91,6 @@ Follow these instructions to get the project running on your local machine.
     npm run dev
     ```
     The frontend will now be running at `http://localhost:5173` (or a similar address). Open this URL in your browser to start chatting with your assistant!
+
+### Vector PNG images used in this project are downloaded from free collection of Vecteezy
+[Avatar PNGs by Vecteezy](https://www.vecteezy.com/free-png/avatar)
