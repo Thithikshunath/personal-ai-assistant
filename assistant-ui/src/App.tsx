@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useMemo, useRef } from 'react';
+﻿import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
@@ -7,22 +7,98 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { atomDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import TextareaAutosize from 'react-textarea-autosize';
 import { Toaster, toast } from 'react-hot-toast';
-import { FaBars, FaTrash, FaCog, FaPlus, FaCopy, FaCheck, FaPencilAlt, FaInbox, FaSyncAlt, FaChevronDown } from 'react-icons/fa';
+import { 
+    FaBars, 
+    FaTrash, 
+    FaCog, 
+    FaPlus, 
+    FaCopy, 
+    FaCheck, 
+    FaPencilAlt, 
+    FaInbox, 
+    FaSyncAlt, 
+    FaChevronDown, 
+    FaPaperclip, 
+    FaTimes 
+} from 'react-icons/fa';
 
 import 'katex/dist/katex.min.css';
 import './index.css';
 
 // --- TYPE DEFINITIONS ---
-type Message = { role: 'user' | 'assistant' | 'system' | 'tool'; content: string };
-type Confirmation = { type: 'search'; query: string } | { type: 'memory'; summary: string };
-type SavedChat = { id: number; title: string; persona_id: string; };
-type Profile = { name: string; key_facts: string[]; main_goals: string[] };
-type Persona = { id: string; name: string; personality: string; avatar: string; greeting: string; title: string; };
+interface MessagePart {
+    type: 'text' | 'image_url';
+    text?: string;
+    image_url?: { url: string };
+}
+
+// Type guard for image parts
+const isImagePart = (part: MessagePart): part is MessagePart & { type: 'image_url'; image_url: { url: string } } => {
+    return part.type === 'image_url' && !!part.image_url;
+};
+
+// Type guard for text parts
+const isTextPart = (part: MessagePart): part is MessagePart & { type: 'text'; text: string } => {
+    return part.type === 'text' && typeof part.text === 'string';
+};
+
+type MessageContent = string | MessagePart[];
+
+interface Message {
+    role: 'user' | 'assistant' | 'system' | 'tool';
+    content: MessageContent;
+}
+
+interface SavedChat {
+    id: number;
+    title: string;
+    persona_id: string;
+}
+
+interface Profile {
+    name: string;
+    key_facts: string[];
+    main_goals: string[];
+}
+
+interface Persona {
+    id: string;
+    name: string;
+    personality: string;
+    avatar: string;
+    greeting: string;
+    title: string;
+}
+
 type AvatarState = 'idle' | 'thinking';
 type SearchProvider = 'brave' | 'ddgs';
-type ModalAction = { text: string; onClick: () => void; className?: string; };
-type ModalContent = { title: string; message: string; actions: ModalAction[]; onCancel: () => void; };
+
+interface ModalAction {
+    text: string;
+    onClick: () => void;
+    className?: string;
+}
+
+interface ModalContent {
+    title: string;
+    message: string;
+    actions: ModalAction[];
+    onCancel: () => void;
+}
+
 type SettingsTab = 'persona' | 'profile' | 'search' | 'appearance';
+
+interface Confirmation {
+    type: 'search' | 'memory';
+    query?: string;
+    summary?: string;
+}
+
+interface Settings {
+    isAnimated: boolean;
+    webSearchEnabled: boolean;
+    provider: SearchProvider;
+}
 
 // --- CONSTANTS ---
 const API_BASE_URL = "http://localhost:8000";
@@ -55,20 +131,75 @@ const ActionModal = ({ content }: { content: ModalContent | null }) => {
 };
 
 
-const CodeBlock = ({ node, inline, className, children, ...props }: any) => {
+interface CodeBlockProps {
+    inline?: boolean;
+    className?: string;
+    children?: React.ReactNode;
+}
+
+const CodeBlock: React.FC<CodeBlockProps> = ({ inline, className, children, ...props }) => {
     const [isCopied, setIsCopied] = useState(false);
     const match = /language-(\w+)/.exec(className || '');
     const codeText = String(children).replace(/\n$/, '');
-    const handleCopy = () => { navigator.clipboard.writeText(codeText); toast.success("Copied!"); setTimeout(() => setIsCopied(false), 2000); };
+    
+    const handleCopy = () => { 
+        navigator.clipboard.writeText(codeText); 
+        toast.success("Copied!"); 
+        setTimeout(() => setIsCopied(false), 2000); 
+    };
+    
     return !inline && match ? (
         <div className="code-block-wrapper">
-            <button className="copy-code-btn" onClick={handleCopy}>{isCopied ? <FaCheck /> : <FaCopy />}</button>
-            <SyntaxHighlighter style={atomDark} language={match[1]} PreTag="div" {...props}>{codeText}</SyntaxHighlighter>
+            <button className="copy-code-btn" onClick={handleCopy}>
+                {isCopied ? <FaCheck /> : <FaCopy />}
+            </button>
+            <SyntaxHighlighter 
+                style={atomDark} 
+                language={match[1]} 
+                PreTag="div" 
+                {...props}
+            >
+                {codeText}
+            </SyntaxHighlighter>
         </div>
-    ) : <code className={className} {...props}>{children}</code>;
+    ) : (
+        <code className={className} {...props}>
+            {children}
+        </code>
+    );
 };
 
-const SettingsModal = ({ isOpen, onClose, personas, setPersonas, profile, setProfile, onSave, settings, setSettings }: any) => {
+interface SettingsModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    personas: Persona[];
+    setPersonas: React.Dispatch<React.SetStateAction<Persona[]>>;
+    profile: Profile;
+    setProfile: React.Dispatch<React.SetStateAction<Profile>>;
+    onSave: () => void;
+    settings: {
+        isAnimated: boolean;
+        webSearchEnabled: boolean;
+        provider: SearchProvider;
+    };
+    setSettings: React.Dispatch<React.SetStateAction<{
+        isAnimated: boolean;
+        webSearchEnabled: boolean;
+        provider: SearchProvider;
+    }>>;
+}
+
+const SettingsModal: React.FC<SettingsModalProps> = ({ 
+    isOpen, 
+    onClose, 
+    personas, 
+    setPersonas, 
+    profile, 
+    setProfile, 
+    onSave, 
+    settings, 
+    setSettings 
+}) => {
     const [activeTab, setActiveTab] = useState<SettingsTab>('persona');
     const [selectedPersonaId, setSelectedPersonaId] = useState<string>(personas[0]?.id || '');
 
@@ -170,12 +301,11 @@ const SettingsModal = ({ isOpen, onClose, personas, setPersonas, profile, setPro
         </div>
     );
 };
-
-
 function App() {
-    // --- STATE MANAGEMENT ---
+    // State initialization with proper types
     const [messages, setMessages] = useState<Message[]>(getInitialMessages());
     const [input, setInput] = useState('');
+    const [attachedImage, setAttachedImage] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [confirmation, setConfirmation] = useState<Confirmation | null>(null);
     const [savedChats, setSavedChats] = useState<SavedChat[]>([]);
@@ -185,9 +315,6 @@ function App() {
     const [editingMessage, setEditingMessage] = useState<{ index: number; text: string } | null>(null);
     const [modalContent, setModalContent] = useState<ModalContent | null>(null);
     const [isChatModified, setIsChatModified] = useState(false);
-    const chatWindowRef = useRef<HTMLDivElement>(null);
-
-    // Settings & Personalization State
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [avatarState, setAvatarState] = useState<AvatarState>('idle');
     const [personas, setPersonas] = useState<Persona[]>([]);
@@ -196,9 +323,14 @@ function App() {
     const [profile, setProfile] = useState<Profile>({ name: '', key_facts: [], main_goals: [] });
     const [tempPersonas, setTempPersonas] = useState<Persona[]>([]);
     const [tempProfile, setTempProfile] = useState<Profile>({ name: '', key_facts: [], main_goals: [] });
-    const [settings, setSettings] = useState({ isAnimated: true, webSearchEnabled: true, provider: 'brave' as SearchProvider });
+    const [settings, setSettings] = useState<Settings>({
+        isAnimated: true,
+        webSearchEnabled: true,
+        provider: 'brave' as SearchProvider
+    });
     const [isPersonaSwitcherOpen, setIsPersonaSwitcherOpen] = useState(false);
 
+    const chatWindowRef = useRef<HTMLDivElement>(null);
     const currentPersona = useMemo(() => personas.find(p => p.id === currentPersonaId) || null, [personas, currentPersonaId]);
 
     // --- EFFECTS ---
@@ -230,7 +362,10 @@ function App() {
                 const profileData = await profileRes.json();
                 setProfile(profileData);
                 setTempProfile(profileData);
-            } catch (error) { toast.error("Could not load app data from backend."); }
+            } catch (error) { 
+                console.error('Error details:', error);
+                toast.error("Could not load app data from backend."); 
+            }
         };
 
         const loadSettings = () => { const saved = localStorage.getItem('appSettings'); if (saved) setSettings(JSON.parse(saved)); };
@@ -283,7 +418,7 @@ function App() {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    const filteredMessages = useMemo(() => messages.filter(msg => msg.role !== 'system' && msg.role !== 'tool' && !msg.content.includes('tool_name')), [messages]);
+    const filteredMessages = useMemo(() => messages.filter(msg => msg.role !== 'system' && msg.role !== 'tool' && !JSON.stringify(msg.content).includes('tool_name')), [messages]);
 
     // --- HANDLER FUNCTIONS ---
     const postRequest = async (body: object) => {
@@ -295,28 +430,57 @@ function App() {
             setMessages(data.history);
             setIsChatModified(true); // Any response from backend means chat has changed
             if (data.confirmation) setConfirmation(data.confirmation);
-        } catch (error) { toast.error('An error occurred. Please try again.'); }
-        finally { setIsLoading(false); setAvatarState('idle'); }
+        } catch (error) {
+            console.error('Error details:', error);
+            toast.error('An error occurred. Please try again.');
+        } finally { setIsLoading(false); setAvatarState('idle'); }
     };
 
-    const sendMessage = async () => {
-        if (!input.trim() || isLoading) return;
-        const newHistory = [...messages, { role: 'user', content: input }];
+    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setAttachedImage(reader.result as string);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    // Message handling functions
+    const sendMessage = useCallback(async () => {
+        const textContent = input.trim();
+        if (!textContent && !attachedImage) return;
+
+        let content: Message['content'];
+        if (attachedImage) {
+            content = [
+                { type: 'text', text: textContent },
+                { type: 'image_url', image_url: { url: attachedImage } }
+            ];
+        } else {
+            content = textContent;
+        }
+
+        const newMessage: Message = { role: 'user', content };
+        const newHistory = [...messages, newMessage];
         setMessages(newHistory);
         setInput('');
-        setIsPersonaLocked(true); // Lock persona on first message
+        setAttachedImage(null);
+        setIsPersonaLocked(true);
         await postRequest({ history: newHistory, settings, persona_id: currentPersonaId });
-    };
+    }, [input, attachedImage, messages, settings, currentPersonaId]);
 
-    const handleConfirmation = async (approved: boolean) => {
+    const handleConfirmation = useCallback(async (approved: boolean) => {
         if (!confirmation) return;
         const currentConfirmation = confirmation;
         setConfirmation(null);
-        let continuation = {};
-        if (currentConfirmation.type === 'search') continuation = { action: approved ? 'approved_search' : 'denied_search', query: currentConfirmation.query };
-        else if (currentConfirmation.type === 'memory') continuation = { action: approved ? 'save_memory' : 'dont_save_memory', summary: currentConfirmation.summary };
+        const continuation = currentConfirmation.type === 'search'
+            ? { action: approved ? 'approved_search' : 'denied_search', query: currentConfirmation.query }
+            : { action: approved ? 'save_memory' : 'dont_save_memory', summary: currentConfirmation.summary };
+        
         await postRequest({ history: messages, continuation, settings, persona_id: currentPersonaId });
-    };
+    }, [confirmation, messages, settings, currentPersonaId]);
 
     const handleModalClose = () => { setModalContent(null); };
 
@@ -330,38 +494,83 @@ function App() {
             setProfile(tempProfile);
             toast.success("Settings saved!");
             setIsSettingsOpen(false);
-        } catch (error) { toast.error("Could not save settings."); }
+        } catch (error) { 
+            console.error('Settings save error:', error);
+            toast.error("Could not save settings."); 
+        }
     };
 
     const openSettingsModal = () => { setTempPersonas(JSON.parse(JSON.stringify(personas))); setTempProfile(JSON.parse(JSON.stringify(profile))); setIsSettingsOpen(true); };
 
-    const toggleThinkingVisibility = (index: number) => { const newSet = new Set(expandedMessages); newSet.has(index) ? newSet.delete(index) : newSet.add(index); setExpandedMessages(newSet); };
+    const toggleThinkingVisibility = (index: number): void => {
+        const newSet = new Set(expandedMessages);
+        if (newSet.has(index)) {
+            newSet.delete(index);
+        } else {
+            newSet.add(index);
+        }
+        setExpandedMessages(newSet);
+    };
+
+    const getMessageText = (content: MessageContent): string => {
+        if (typeof content === 'string') {
+            return content;
+        }
+        const textPart = content.find((part): part is MessagePart & { type: 'text' } => 
+            part.type === 'text' && typeof part.text === 'string'
+        );
+        return textPart?.text || '';
+    };
 
     const handleSaveChat = async () => {
         const firstUserMessage = messages.find(m => m.role === 'user');
-        const title = firstUserMessage ? firstUserMessage.content.substring(0, 40) + '...' : `Chat ${new Date().toLocaleTimeString()}`;
+        const title = firstUserMessage 
+            ? getMessageText(firstUserMessage.content).substring(0, 40) + '...' 
+            : `Chat ${new Date().toLocaleTimeString()}`;
+        
         try {
-            const response = await fetch(`${API_BASE_URL}/api/chats`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title, messages, persona_id: currentPersonaId }) });
+            const response = await fetch(`${API_BASE_URL}/api/chats`, { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify({ title, messages, persona_id: currentPersonaId }) 
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
             const newChat = await response.json();
             setSavedChats(prev => [newChat, ...prev].sort((a, b) => b.id - a.id));
             setCurrentChatId(newChat.id);
             setIsChatModified(false);
             toast.success("Chat saved!");
-        } catch (error) { toast.error("Error: Could not save chat."); }
+        } catch (error) {
+            console.error('Save chat error:', error);
+            toast.error("Error: Could not save chat.");
+        }
     };
 
     const handleUpdateChat = async () => {
         if (!currentChatId) return;
         try {
-            await fetch(`${API_BASE_URL}/api/chats/${currentChatId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages, persona_id: currentPersonaId }) });
+            const response = await fetch(`${API_BASE_URL}/api/chats/${currentChatId}`, { 
+                method: 'PUT', 
+                headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify({ messages, persona_id: currentPersonaId }) 
+            });
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
             setIsChatModified(false);
             toast.success("Chat changes saved!");
-        } catch (error) { toast.error("Error: Could not update chat."); }
+        } catch (error: unknown) {
+            console.error('Update chat error:', error);
+            toast.error("Error: Could not update chat.");
+        }
     };
 
     const handleLoadChat = async (chatId: number) => {
         try {
             const response = await fetch(`${API_BASE_URL}/api/chats/${chatId}`);
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
             const data = await response.json();
             setMessages(data.messages);
             setCurrentChatId(chatId);
@@ -371,21 +580,31 @@ function App() {
             setConfirmation(null);
             setExpandedMessages(new Set());
             if (window.innerWidth < 768) setIsSidebarOpen(false);
-        } catch (error) { toast.error("Failed to load chat."); }
+        } catch (error: unknown) {
+            console.error('Load chat error:', error);
+            toast.error("Failed to load chat.");
+        }
     };
 
     const handleDeleteChat = async (chatId: number, e: React.MouseEvent) => {
         e.stopPropagation();
         setModalContent({
-            title: "Delete Chat", message: "Are you sure you want to permanently delete this chat?",
+            title: "Delete Chat", 
+            message: "Are you sure you want to permanently delete this chat?",
             actions: [{
-                text: "Delete", className: "btn-danger", onClick: async () => {
+                text: "Delete", 
+                className: "btn-danger", 
+                onClick: async () => {
                     try {
-                        await fetch(`${API_BASE_URL}/api/chats/${chatId}`, { method: 'DELETE' });
+                        const response = await fetch(`${API_BASE_URL}/api/chats/${chatId}`, { method: 'DELETE' });
+                        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                         setSavedChats(prev => prev.filter(c => c.id !== chatId));
                         if (currentChatId === chatId) handleNewChat(false);
                         toast.success("Chat deleted.");
-                    } catch (error) { toast.error("Failed to delete chat."); }
+                    } catch (error: unknown) {
+                        console.error('Delete chat error:', error);
+                        toast.error("Failed to delete chat.");
+                    }
                 }
             }],
             onCancel: handleModalClose,
@@ -400,6 +619,7 @@ function App() {
         setCurrentChatId(null);
         setIsChatModified(false);
         setIsPersonaLocked(false);
+        setAttachedImage(null);
         setCurrentPersonaId(DEFAULT_PERSONA_ID);
     };
 
@@ -423,11 +643,13 @@ function App() {
                     {
                         text: "Save",
                         className: 'btn-primary',
-                        onClick: async () => {
-                            if (currentChatId) await handleUpdateChat();
-                            else await handleSaveChat();
-                            startNewChat();
-                            handleModalClose();
+                        onClick: () => {
+                            (async () => {
+                                if (currentChatId) await handleUpdateChat();
+                                else await handleSaveChat();
+                                startNewChat();
+                                handleModalClose();
+                            })();
                         },
                     },
                 ],
@@ -439,8 +661,14 @@ function App() {
 
     const handleStartEdit = (msgToEdit: Message) => {
         const trueIndex = messages.findIndex(m => m === msgToEdit);
-        if (trueIndex > -1) setEditingMessage({ index: trueIndex, text: msgToEdit.content });
-        else toast.error("Could not find message to edit.");
+        if (trueIndex > -1) {
+            const text = typeof msgToEdit.content === 'string' ? 
+                msgToEdit.content : 
+                JSON.stringify(msgToEdit.content);
+            setEditingMessage({ index: trueIndex, text });
+        } else {
+            toast.error("Could not find message to edit.");
+        }
     };
 
     const handleSaveOnly = () => {
@@ -478,14 +706,41 @@ function App() {
         });
     };
 
+    const findLastIndex = <T,>(array: T[], predicate: (value: T) => boolean): number => {
+        for (let i = array.length - 1; i >= 0; i--) {
+            if (predicate(array[i])) {
+                return i;
+            }
+        }
+        return -1;
+    };
+
     const handleRegenerateLast = async () => {
         if (isLoading) return;
-        const lastUserMessageIndex = messages.findLastIndex(m => m.role === 'user');
+        const lastUserMessageIndex = findLastIndex(messages, (m: Message) => m.role === 'user');
         if (lastUserMessageIndex > -1) {
             const historyToRegenerate = messages.slice(0, lastUserMessageIndex + 1);
             setMessages(historyToRegenerate);
             await postRequest({ history: historyToRegenerate, settings, persona_id: currentPersonaId });
-        } else { toast.error("No user message found to regenerate from."); }
+        } else { 
+            toast.error("No user message found to regenerate from."); 
+        }
+    };
+
+    const handleThinkingContent = (content: MessageContent): { 
+        hasThinkTag: boolean;
+        thinkingContent: string | null;
+        answerContent: string;
+    } => {
+        const textContent = typeof content === 'string' ? content : getMessageText(content);
+        const thinkMatch = textContent.match(/<think>([\s\S]*?)<\/think>/);
+        const hasThinkTag = !!thinkMatch;
+        
+        return {
+            hasThinkTag,
+            thinkingContent: thinkMatch ? thinkMatch[1].trim() : null,
+            answerContent: hasThinkTag ? textContent.replace(/<think>[\s\S]*?<\/think>/g, '').trim() : textContent
+        };
     };
 
     // --- RENDER ---
@@ -495,19 +750,45 @@ function App() {
         <div className="app-container">
             <Toaster position="top-center" reverseOrder={false} />
             <ActionModal content={modalContent} />
-            <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} personas={tempPersonas} setPersonas={setTempPersonas} profile={tempProfile} setProfile={setTempProfile} onSave={handleSaveSettings} settings={settings} setSettings={setSettings} />
-
+            <SettingsModal 
+                isOpen={isSettingsOpen} 
+                onClose={() => setIsSettingsOpen(false)}
+                personas={tempPersonas}
+                setPersonas={setTempPersonas}
+                profile={tempProfile}
+                setProfile={setTempProfile}
+                onSave={handleSaveSettings}
+                settings={settings}
+                setSettings={setSettings}
+            />
+            
             <div className={`sidebar ${isSidebarOpen ? 'open' : ''}`}>
-                <div className="sidebar-header"><h3>Saved Chats</h3></div>
+                <div className="sidebar-header">
+                    <h3>Saved Chats</h3>
+                </div>
                 <div className="saved-chats-list">
                     {savedChats.length > 0 ? (
                         savedChats.map(chat => (
-                            <div key={chat.id} className={`saved-chat-item ${currentChatId === chat.id ? 'active' : ''}`} onClick={() => handleLoadChat(chat.id)}>
+                            <div 
+                                key={chat.id} 
+                                className={`saved-chat-item ${currentChatId === chat.id ? 'active' : ''}`} 
+                                onClick={() => handleLoadChat(chat.id)}
+                            >
                                 <span className="chat-title">{chat.title}</span>
-                                <button onClick={(e) => handleDeleteChat(chat.id, e)} className="delete-chat-btn"><FaTrash /></button>
+                                <button 
+                                    onClick={(e) => handleDeleteChat(chat.id, e)} 
+                                    className="delete-chat-btn"
+                                >
+                                    <FaTrash />
+                                </button>
                             </div>
                         ))
-                    ) : (<div className="empty-chats-placeholder"><FaInbox /><p>No saved chats yet.</p></div>)}
+                    ) : (
+                        <div className="empty-chats-placeholder">
+                            <FaInbox />
+                            <p>No saved chats yet.</p>
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -544,11 +825,8 @@ function App() {
                             const isEditing = editingMessage?.index !== undefined && messages[editingMessage.index] === msg;
                             const isLastMessage = index === filteredMessages.length - 1;
                             const isAssistant = msg.role === 'assistant';
-                            const hasThinkTag = isAssistant && /<think>[\s\S]*?<\/think>/.test(msg.content);
+                            const { hasThinkTag, thinkingContent, answerContent } = handleThinkingContent(msg.content);
                             const isExpanded = expandedMessages.has(index);
-                            let thinkingContent: string | null = null;
-                            let answerContent = msg.content;
-                            if (hasThinkTag) { thinkingContent = msg.content.match(/<think>([\s\S]*?)<\/think>/)?.[1].trim() ?? null; answerContent = msg.content.replace(/<think>[\s\S]*?<\/think>/g, '').trim(); }
 
                             return (
                                 <div key={index} className={`message-wrapper ${msg.role}`}>
@@ -561,7 +839,39 @@ function App() {
                                             </div>
                                         ) : (
                                             <>
-                                                <div className="message-content"><ReactMarkdown components={{ code: CodeBlock }} remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex]}>{answerContent}</ReactMarkdown></div>
+                                                    <div className="message-content">
+                                                        {typeof msg.content === 'string' ? (
+                                                            <ReactMarkdown components={{ code: CodeBlock }} remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex]}>
+                                                                {answerContent}
+                                                            </ReactMarkdown>
+                                                        ) : (
+                                                            msg.content.map((part, partIndex) => {
+                                                                if (isTextPart(part)) {
+                                                                    return (
+                                                                        <ReactMarkdown 
+                                                                            key={partIndex} 
+                                                                            components={{ code: CodeBlock }} 
+                                                                            remarkPlugins={[remarkGfm, remarkMath]} 
+                                                                            rehypePlugins={[rehypeKatex]}
+                                                                        >
+                                                                            {part.text}
+                                                                        </ReactMarkdown>
+                                                                    );
+                                                                }
+                                                                if (isImagePart(part)) {
+                                                                    return (
+                                                                        <img 
+                                                                            key={partIndex} 
+                                                                            src={part.image_url.url} 
+                                                                            alt="User upload" 
+                                                                            style={{ maxWidth: '100%', borderRadius: '12px', marginTop: '8px' }} 
+                                                                        />
+                                                                    );
+                                                                }
+                                                                return null;
+                                                            })
+                                                        )}
+                                                    </div>
                                                 <div className="message-actions">
                                                     <button title="Edit" className="message-action-btn" onClick={() => handleStartEdit(msg)}><FaPencilAlt /></button>
                                                     <button title="Delete" className="message-action-btn delete" onClick={() => handleDeleteMessage(msg)}><FaTrash /></button>
@@ -578,8 +888,26 @@ function App() {
                         {isLoading && (<div className="message-wrapper assistant"><img src={currentPersona.avatar} alt="assistant avatar" className="chat-avatar" /><div className="message-bubble"><div className="thinking-dots"><span></span><span></span><span></span></div></div></div>)}
                     </div>
                     <div className="input-area">
-                        <TextareaAutosize minRows={1} maxRows={6} value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }} placeholder="Ask your assistant..." disabled={isLoading || !!confirmation || isSettingsOpen} />
-                        <button onClick={sendMessage} disabled={isLoading || !input.trim() || !!confirmation || isSettingsOpen}>Send</button>
+                        {attachedImage && (
+                            <div className="image-preview">
+                                <img src={attachedImage} alt="Preview" />
+                                <button onClick={() => setAttachedImage(null)}><FaTimes /></button>
+                            </div>
+                        )}
+                        <TextareaAutosize
+                            minRows={1}
+                            maxRows={6}
+                            value={input}
+                            onChange={(e) => setInput(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
+                            placeholder="Ask your assistant or attach an image..."
+                            disabled={isLoading || !!confirmation || isSettingsOpen}
+                        />
+                        <input type="file" id="file-upload" accept="image/*" onChange={handleImageChange} style={{ display: 'none' }} />
+                        <button className="icon-button attach-btn" onClick={() => document.getElementById('file-upload')?.click()} title="Attach Image">
+                            <FaPaperclip />
+                        </button>
+                        <button onClick={sendMessage} disabled={isLoading || (!input.trim() && !attachedImage) || !!confirmation || isSettingsOpen}>Send</button>
                     </div>
                 </div>
             </div>

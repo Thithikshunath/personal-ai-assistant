@@ -15,7 +15,7 @@ from ddgs import DDGS
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Union
 
 # --- 1. INITIALIZE APP AND SERVICES ---
 load_dotenv()
@@ -105,7 +105,7 @@ def init_db():
 init_db()
 
 # --- Pydantic Models ---
-class ChatMessage(BaseModel): role: str; content: str
+class ChatMessage(BaseModel): role: str; content: Union[str, List[Dict[str, Any]]]
 class SettingsModel(BaseModel): provider: str = 'brave'; webSearchEnabled: bool = True
 class PersonaModel(BaseModel): id: str; name: str; avatar: str; personality: str; greeting: str; title: Optional[str] = 'Assistant';
 
@@ -171,7 +171,14 @@ async def chat_endpoint(request: ChatRequest):
         elif action == "save_memory": await save_memory(request.continuation.get("summary")); return {"history": history}
         elif action == "dont_save_memory": return {"history": history}
     else:
-        user_input = history[-1]['content']
+        user_message_content = history[-1]['content']
+        user_input = ""
+        if isinstance(user_message_content, list):
+            text_part = next((part['text'] for part in user_message_content if part['type'] == 'text'), None)
+            if text_part:
+                user_input = text_part
+        else:
+            user_input = user_message_content
         personas = json.loads(Path(PERSONAS_FILE).read_text())
         persona_data = next((p for p in personas if p['id'] == request.persona_id), personas[0])
         persona = persona_data.get('personality') or persona_data.get('prompt', '') # Handle both keys
@@ -197,8 +204,10 @@ async def chat_endpoint(request: ChatRequest):
                 except json.JSONDecodeError: pass
 
         if not confirmation:
-            summary = await get_interaction_summary(history[-2:])
-            if summary and "no new key information" not in summary.lower(): confirmation = {"type": "memory", "summary": summary}
+            if (len(history) - 1) % 6 == 0 and len(history) > 1:
+                summary = await get_interaction_summary(history[-6:])
+                if summary and "no new key information" not in summary.lower():
+                    confirmation = {"type": "memory", "summary": summary}
         
         return {"history": history, "confirmation": confirmation}
     except Exception as e:
